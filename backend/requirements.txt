@@ -1,0 +1,35 @@
+# LangChain 核心包 - 严格使用 1.0.3 版本（宪法级别规定）
+langchain==1.0.3
+langchain-core==1.0.3
+langchain-openai==1.0.2
+langchain-community==0.4.1
+
+# LangGraph - 用于构建复杂工作流
+langgraph==1.0.2
+
+# LangChain 集成包
+langchain-tavily==0.2.13  # Tavily 搜索工具（V1.0.0 推荐）
+
+# FastAPI 和服务器
+fastapi==0.121.0
+uvicorn[standard]==0.34.0
+
+# 数据验证 - Pydantic 2
+pydantic==2.12.4
+pydantic-settings==2.11.0
+
+# HTTP 客户端
+httpx[socks]==0.28.1
+
+# 环境变量管理
+python-dotenv==1.0.1
+
+# HTTP 客户端
+httpx==0.28.1
+
+# 工具相关
+tavily-python==0.5.0
+
+# 日志和监控
+loguru==0.7.3
+
