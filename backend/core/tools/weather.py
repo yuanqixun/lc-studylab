@@ -6,6 +6,7 @@ API 文档：https://lbs.amap.com/api/webservice/guide/api/weatherinfo
 """
 
 import httpx
+from datetime import datetime, timedelta
 from typing import Optional, Literal
 from langchain_core.tools import tool
 
@@ -164,12 +165,13 @@ def _format_live_weather(data: dict) -> str:
     return result
 
 
-def _format_forecast_weather(data: dict) -> str:
+def _format_forecast_weather(data: dict, day_offset: Optional[int] = None) -> str:
     """
     格式化预报天气数据
     
     Args:
         data: API 返回的 JSON 数据
+        day_offset: 指定查询第几天的天气（0=今天，1=明天，2=后天，None=所有天）
         
     Returns:
         格式化的天气信息字符串
@@ -189,13 +191,12 @@ def _format_forecast_weather(data: dict) -> str:
     if not casts:
         return "未查询到具体预报数据"
     
-    # 格式化输出
-    result = [f"📍 地区：{province} {city}"]
-    result.append(f"⏰ 预报发布时间：{reporttime}")
-    result.append("")
-    
-    # 遍历每天的预报
-    for cast in casts:
+    # 如果指定了 day_offset，只返回那一天的数据
+    if day_offset is not None:
+        if day_offset < 0 or day_offset >= len(casts):
+            return f"错误：无法查询第 {day_offset} 天的天气（可用范围: 0-{len(casts)-1}）"
+        
+        cast = casts[day_offset]
         date = cast.get("date", "")
         week = cast.get("week", "")
         dayweather = cast.get("dayweather", "")
@@ -207,8 +208,44 @@ def _format_forecast_weather(data: dict) -> str:
         daypower = cast.get("daypower", "")
         nightpower = cast.get("nightpower", "")
         
+        # 生成时间描述
+        day_names = ["今天", "明天", "后天"]
+        day_name = day_names[day_offset] if day_offset < len(day_names) else f"{day_offset}天后"
+        
+        result = f"""📍 地区：{province} {city}
+⏰ 预报发布时间：{reporttime}
+
+📅 {day_name}（{date} 星期{week}）
+  🌞 白天：{dayweather}  {daytemp}°C  {daywind}风{daypower}级
+  🌙 夜间：{nightweather}  {nighttemp}°C  {nightwind}风{nightpower}级"""
+        
+        logger.info(f"✅ 预报天气查询成功: {city} {day_name}")
+        return result
+    
+    # 返回所有天的预报
+    result = [f"📍 地区：{province} {city}"]
+    result.append(f"⏰ 预报发布时间：{reporttime}")
+    result.append("")
+    
+    # 遍历每天的预报
+    for idx, cast in enumerate(casts):
+        date = cast.get("date", "")
+        week = cast.get("week", "")
+        dayweather = cast.get("dayweather", "")
+        nightweather = cast.get("nightweather", "")
+        daytemp = cast.get("daytemp", "")
+        nighttemp = cast.get("nighttemp", "")
+        daywind = cast.get("daywind", "")
+        nightwind = cast.get("nightwind", "")
+        daypower = cast.get("daypower", "")
+        nightpower = cast.get("nightpower", "")
+        
+        # 生成时间描述
+        day_names = ["今天", "明天", "后天"]
+        day_name = day_names[idx] if idx < len(day_names) else f"{idx}天后"
+        
         day_info = f"""
-📅 {date} 星期{week}
+📅 {day_name}（{date} 星期{week}）
   🌞 白天：{dayweather}  {daytemp}°C  {daywind}风{daypower}级
   🌙 夜间：{nightweather}  {nighttemp}°C  {nightwind}风{nightpower}级
 """.strip()
@@ -240,9 +277,105 @@ def get_weather_forecast(city: str) -> str:
     return _get_weather_impl(city=city, extensions="all")
 
 
+@tool
+def get_daily_weather(
+    city: str,
+    day: Literal["today", "tomorrow", "day_after_tomorrow"] = "tomorrow"
+) -> str:
+    """
+    查询指定城市某一天的天气预报
+    
+    这是最智能的天气查询工具，可以精确查询某一天的天气。
+    当用户问"明天天气"、"后天天气"时，应该使用这个工具。
+    
+    Args:
+        city: 城市名称或城市编码（adcode）
+              例如："北京"、"上海"、"深圳"、"广州"
+        day: 查询哪一天的天气
+             - "today": 今天
+             - "tomorrow": 明天（默认）
+             - "day_after_tomorrow": 后天
+    
+    Returns:
+        格式化的天气预报信息字符串（只包含指定那一天）
+        
+    Example:
+        >>> # 查询深圳明天的天气
+        >>> result = get_daily_weather.invoke({"city": "深圳", "day": "tomorrow"})
+        >>> print(result)
+        
+        >>> # 查询北京后天的天气
+        >>> result = get_daily_weather.invoke({"city": "北京", "day": "day_after_tomorrow"})
+        >>> print(result)
+    
+    注意：
+        - 这个工具会自动调用预报天气API，但只返回指定那一天的信息
+        - 更节省 token，适合用户只问某一天天气的场景
+    """
+    # 映射 day 参数到 day_offset
+    day_offset_map = {
+        "today": 0,
+        "tomorrow": 1,
+        "day_after_tomorrow": 2,
+    }
+    
+    day_offset = day_offset_map.get(day, 1)
+    
+    # 调用底层实现获取预报数据
+    # 检查 API Key
+    amap_key = getattr(settings, 'amap_key', None)
+    if not amap_key:
+        error_msg = "高德地图 API Key 未设置！请在 .env 文件中设置 AMAP_KEY。\n获取 API Key: https://console.amap.com/"
+        logger.error(error_msg)
+        return f"错误：{error_msg}"
+    
+    # API 端点
+    url = "https://restapi.amap.com/v3/weather/weatherInfo"
+    
+    # 构建请求参数（使用 all 获取预报）
+    params = {
+        "key": amap_key,
+        "city": city,
+        "extensions": "all",
+        "output": "JSON"
+    }
+    
+    logger.info(f"🌤️ 查询天气: city={city}, day={day} (offset={day_offset})")
+    
+    try:
+        # 发送 HTTP 请求
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+        
+        # 检查返回状态
+        if data.get("status") != "1":
+            error_msg = f"天气查询失败: {data.get('info', '未知错误')}"
+            logger.error(error_msg)
+            return f"错误：{error_msg}"
+        
+        # 格式化输出（只返回指定那一天）
+        return _format_forecast_weather(data, day_offset=day_offset)
+            
+    except httpx.TimeoutException:
+        error_msg = "天气查询超时，请稍后重试"
+        logger.error(error_msg)
+        return f"错误：{error_msg}"
+    except httpx.HTTPStatusError as e:
+        error_msg = f"HTTP 请求失败: {e.response.status_code}"
+        logger.error(error_msg)
+        return f"错误：{error_msg}"
+    except Exception as e:
+        error_msg = f"天气查询出错: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return f"错误：{error_msg}"
+
+
 # 导出工具
 __all__ = [
     "get_weather",
     "get_weather_forecast",
+    "get_daily_weather",
 ]
 

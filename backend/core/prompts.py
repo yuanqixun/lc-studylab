@@ -220,13 +220,25 @@ def create_custom_prompt(
 TOOL_USAGE_INSTRUCTIONS = """
 可用工具说明：
 - 🔍 web_search: 搜索互联网获取最新信息
-- 🕐 get_current_time: 获取当前时间
+- 🕐 get_current_time: 获取当前时间和日期
 - 🧮 calculator: 执行数学计算
+- 🌤️ get_daily_weather: 查询某一天的天气（今天/明天/后天）
+- 🌦️ get_weather_forecast: 查询未来3-4天的天气预报
+- 🌡️ get_weather: 查询实时天气或预报天气
 
 使用工具的时机：
 - 需要最新信息或实时数据时，使用 web_search
-- 需要知道当前时间时，使用 get_current_time
+- 需要知道当前时间或日期时，使用 get_current_time
 - 需要精确计算时，使用 calculator
+- 需要查询某一天的天气（如"明天天气"、"后天天气"），使用 get_daily_weather（推荐）
+  * 参数 day 可以是: "today"（今天）、"tomorrow"（明天）、"day_after_tomorrow"（后天）
+- 需要查询多天预报时，使用 get_weather_forecast
+- 需要查询实时天气时，使用 get_weather
+
+天气查询的上下文记忆：
+- 当用户第一次问某个城市的天气时，记住这个城市
+- 如果用户接着问"后天呢？"、"大后天呢？"，应该查询之前提到的同一个城市
+- 从对话历史中提取城市名称和时间信息
 
 注意：优先使用工具获取准确信息，而不是依赖可能过时的知识。
 """

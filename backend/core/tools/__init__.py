@@ -9,7 +9,7 @@
 from .time_tools import get_current_time, get_current_date
 from .calculator import calculator
 from .web_search import web_search, web_search_simple, create_tavily_search_tool
-from .weather import get_weather, get_weather_forecast
+from .weather import get_weather, get_weather_forecast, get_daily_weather
 
 # ==================== 工具集合 ====================
 
@@ -24,8 +24,9 @@ BASIC_TOOLS = [
 ADVANCED_TOOLS = [
     web_search,
     web_search_simple,
-    get_weather,
-    get_weather_forecast,
+    get_daily_weather,  # 智能天气查询（推荐）
+    get_weather_forecast,  # 多天预报
+    get_weather,  # 通用天气查询
 ]
 
 # 所有工具的完整列表
@@ -41,6 +42,7 @@ __all__ = [
     "create_tavily_search_tool",
     "get_weather",
     "get_weather_forecast",
+    "get_daily_weather",
     # 工具集合
     "BASIC_TOOLS",
     "ADVANCED_TOOLS",

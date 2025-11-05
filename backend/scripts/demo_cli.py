@@ -162,6 +162,8 @@ class ChatSession:
     
     async def chat(self, message: str) -> str:
         """发送消息并获取回复"""
+        from langchain_core.messages import HumanMessage, AIMessage
+        
         if self.streaming:
             # 流式输出
             print_colored("🤖 助手: ", Colors.BLUE, end="")
@@ -175,6 +177,11 @@ class ChatSession:
                 full_response += chunk
             
             print()  # 换行
+            
+            # 更新对话历史
+            self.chat_history.append(HumanMessage(content=message))
+            self.chat_history.append(AIMessage(content=full_response))
+            
             return full_response
         else:
             # 非流式输出
@@ -182,6 +189,11 @@ class ChatSession:
                 input_text=message,
                 chat_history=self.chat_history,
             )
+            
+            # 更新对话历史
+            self.chat_history.append(HumanMessage(content=message))
+            self.chat_history.append(AIMessage(content=response))
+            
             return response
 
 
