@@ -182,3 +182,7 @@ http://localhost:8000/deep-research
 ## 🧾 开源协议
 
 本项目基于 **MIT License** 开源，欢迎学习、修改与二次开发。
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=hefeng6500/lc-studylab&type=Date)](https://star-history.com/#hefeng6500/lc-studylab&Date)
