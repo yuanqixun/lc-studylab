@@ -132,6 +132,11 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 python -m api.http_server
 ```
 
+访问 API 文档：
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
 访问接口：
 
 ```

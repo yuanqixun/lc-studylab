@@ -96,7 +96,9 @@ def test_agent():
     
     try:
         # 创建 Agent
-        agent = create_base_agent(streaming=False)
+        agent = create_base_agent(
+            # streaming=False
+        )
         print("✅ Agent 创建成功")
         
         # 测试简单对话
