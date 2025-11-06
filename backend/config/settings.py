@@ -136,6 +136,97 @@ class Settings(BaseSettings):
         description="Agent 最大执行时间（秒），None 表示无限制"
     )
     
+    # ==================== RAG 配置 ====================
+    # Embedding 配置
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        description="OpenAI Embedding 模型名称"
+    )
+    
+    embedding_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=1000,
+        description="Embedding 批处理大小"
+    )
+    
+    # 文本分块配置
+    chunk_size: int = Field(
+        default=1000,
+        ge=100,
+        le=10000,
+        description="文本分块大小（字符数）"
+    )
+    
+    chunk_overlap: int = Field(
+        default=200,
+        ge=0,
+        le=1000,
+        description="文本分块重叠大小（字符数）"
+    )
+    
+    # 向量库配置
+    vector_store_type: str = Field(
+        default="faiss",
+        description="向量库类型：faiss, inmemory, chroma"
+    )
+    
+    vector_store_path: str = Field(
+        default="data/indexes",
+        description="向量库存储路径"
+    )
+    
+    # 检索配置
+    retriever_search_type: str = Field(
+        default="similarity",
+        description="检索类型：similarity, mmr, similarity_score_threshold"
+    )
+    
+    retriever_k: int = Field(
+        default=4,
+        ge=1,
+        le=20,
+        description="检索返回的文档数量"
+    )
+    
+    retriever_score_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="相似度阈值（仅用于 similarity_score_threshold 模式）"
+    )
+    
+    retriever_fetch_k: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="MMR 检索的候选文档数量"
+    )
+    
+    # RAG Agent 配置
+    rag_agent_max_iterations: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="RAG Agent 最大迭代次数"
+    )
+    
+    rag_agent_return_source_documents: bool = Field(
+        default=True,
+        description="是否返回来源文档"
+    )
+    
+    # 数据路径配置
+    data_documents_path: str = Field(
+        default="data/documents",
+        description="文档存储路径"
+    )
+    
+    data_uploads_path: str = Field(
+        default="data/uploads",
+        description="上传文件存储路径"
+    )
+    
     # Pydantic Settings 配置
     model_config = SettingsConfigDict(
         env_file=".env",  # 从 .env 文件加载

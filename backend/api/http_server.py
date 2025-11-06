@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 import time
 
 from config import settings, setup_logging, get_logger
-from api.routers import chat
+from api.routers import chat, rag
 
 # 初始化日志
 setup_logging()
@@ -167,8 +167,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 注册聊天路由
 app.include_router(chat.router)
 
+# 注册 RAG 路由
+app.include_router(rag.router)
+
 # 后续阶段会添加更多路由：
-# app.include_router(rag.router)
 # app.include_router(deep_research.router)
 
 
