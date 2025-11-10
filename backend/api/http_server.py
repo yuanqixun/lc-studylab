@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 import time
 
 from config import settings, setup_logging, get_logger
-from api.routers import chat, rag, workflow
+from api.routers import chat, rag, workflow, deep_research
 
 # 初始化日志
 setup_logging()
@@ -173,8 +173,8 @@ app.include_router(rag.router)
 # 注册工作流路由（第 3 阶段）
 app.include_router(workflow.router)
 
-# 后续阶段会添加更多路由：
-# app.include_router(deep_research.router)
+# 注册深度研究路由（第 4 阶段）
+app.include_router(deep_research.router)
 
 
 # ==================== 根路径和健康检查 ====================
