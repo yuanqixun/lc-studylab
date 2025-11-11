@@ -1,7 +1,19 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // 重定向到 chat 页面
+    router.push("/chat")
+  }, [router])
+
   return (
-    <div className="container mx-auto py-16 px-4 text-center">
-      <h1 className="text-4xl font-bold mb-6">Hello World!</h1>
+    <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
     </div>
-  );
+  )
 }
