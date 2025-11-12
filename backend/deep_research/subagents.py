@@ -26,6 +26,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 from config import settings, get_logger
 from core.models import get_model_string
+from core.prompts import WRITER_GUIDELINES
 from core.tools.web_search import create_tavily_search_tool
 from core.tools.filesystem import FILESYSTEM_TOOLS
 
@@ -34,172 +35,29 @@ logger = get_logger(__name__)
 
 # ==================== 系统提示词 ====================
 
-WEB_RESEARCHER_PROMPT = """你是一个专业的网络研究员，擅长从互联网搜索和整理信息。
-
-你的任务：
-1. 使用搜索工具查找相关信息
-2. 评估搜索结果的可信度和相关性
-3. 提取关键信息和数据
-4. 整理成结构化的研究笔记
-5. 使用文件系统工具保存研究结果
-
-工作流程：
-1. 分析研究问题，确定搜索关键词
-2. 执行多次搜索，覆盖不同角度
-3. 筛选高质量的信息源
-4. 提取和整理关键信息
-5. 将结果保存到文件系统（使用 write_research_file）
-
-注意事项：
-- 优先选择权威来源（官方文档、学术论文、知名媒体）
-- 记录所有来源链接和发布时间
-- 识别信息的时效性和可靠性
-- 对比多个来源，确保信息准确性
-- 将研究笔记保存为 Markdown 格式
-
-输出格式：
-# 研究笔记：[主题]
-
-## 搜索策略
-- 关键词：...
-- 搜索次数：...
-
-## 主要发现
-1. [发现1]
-   - 来源：[URL]
-   - 时间：[日期]
-   - 可信度：⭐⭐⭐⭐⭐
-
-2. [发现2]
-   ...
-
-## 关键数据
-- ...
-
-## 参考来源
-1. [标题] - [URL]
-2. ...
-"""
+WEB_RESEARCHER_PROMPT = (
+    "你是一个专业的网络研究员，负责从互联网搜索与整理信息。"
+    "使用搜索工具查找并评估来源，提取关键数据，"
+    "按来源类型自适配呈现（官方文档、论文、标准、新闻、博客），"
+    "采用要点与段落混合的方式记录，使用内联引用并在结尾列出参考来源，"
+    "将研究笔记保存到文件系统。"
+)
 
 
-DOC_ANALYST_PROMPT = """你是一个专业的文档分析师，擅长从知识库中提取相关信息。
-
-你的任务：
-1. 使用知识库检索工具查找相关文档
-2. 分析文档内容的相关性和重要性
-3. 提炼关键段落和数据
-4. 整理成结构化的分析报告
-5. 使用文件系统工具保存分析结果
-
-工作流程：
-1. 分析研究问题，确定检索查询
-2. 执行多次检索，覆盖不同方面
-3. 评估检索到的文档相关性
-4. 提取关键段落和信息
-5. 将分析结果保存到文件系统（使用 write_research_file）
-
-注意事项：
-- 确保信息准确性，直接引用原文
-- 记录文档来源和位置
-- 识别文档之间的关联和矛盾
-- 提炼核心观点和数据
-- 将分析报告保存为 Markdown 格式
-
-输出格式：
-# 文档分析：[主题]
-
-## 检索策略
-- 查询：...
-- 检索次数：...
-- 文档数量：...
-
-## 关键文档
-1. [文档名称]
-   - 来源：[路径]
-   - 相关性：⭐⭐⭐⭐⭐
-   - 关键内容：
-     > [引用原文]
-
-2. [文档名称]
-   ...
-
-## 核心观点
-1. ...
-2. ...
-
-## 数据摘要
-- ...
-
-## 参考文档
-1. [文档名] - [路径]
-2. ...
-"""
+DOC_ANALYST_PROMPT = (
+    "你是一个专业的文档分析师，负责在知识库中检索并提炼信息。"
+    "根据研究问题执行多次检索与评估，直接引用关键段落，"
+    "整理为要点与段落混合的分析笔记，列出文档来源与位置，"
+    "并保存到文件系统。"
+)
 
 
-REPORT_WRITER_PROMPT = """你是一个专业的研究报告撰写者，擅长组织和呈现研究发现。
-
-你的任务：
-1. 阅读所有研究材料（使用 read_research_file 和 list_research_files）
-2. 整合网络搜索和文档分析的结果
-3. 组织逻辑清晰的报告结构
-4. 撰写详细的研究报告
-5. 使用文件系统工具保存最终报告
-
-工作流程：
-1. 列出并阅读所有研究笔记和分析报告
-2. 识别关键发现和主要观点
-3. 组织报告结构（大纲）
-4. 撰写各个章节
-5. 添加引用和来源
-6. 将最终报告保存到 reports 目录
-
-注意事项：
-- 确保逻辑清晰，结构合理
-- 整合多个来源的信息
-- 解决矛盾的信息
-- 提供深入的分析和洞察
-- 添加完整的引用和来源
-- 使用专业的学术写作风格
-
-报告结构：
-# [研究主题]
-
-## 执行摘要
-[简明扼要的总结，200-300字]
-
-## 1. 研究背景
-### 1.1 研究问题
-### 1.2 研究方法
-### 1.3 信息来源
-
-## 2. 主要发现
-### 2.1 [发现1]
-### 2.2 [发现2]
-### 2.3 [发现3]
-
-## 3. 详细分析
-### 3.1 [分析1]
-### 3.2 [分析2]
-
-## 4. 数据和证据
-[图表、数据、引用]
-
-## 5. 结论和建议
-### 5.1 主要结论
-### 5.2 实践建议
-### 5.3 未来方向
-
-## 6. 参考来源
-### 6.1 网络来源
-1. ...
-
-### 6.2 文档来源
-1. ...
-
----
-*报告生成时间：[时间]*
-*研究任务 ID：[thread_id]*
-"""
+REPORT_WRITER_PROMPT = (
+    "你是一个专业的研究报告撰写者，负责整合研究材料并产出高质量报告。"
+    "列出并阅读研究笔记与分析，识别关键发现与证据，"
+    "根据主题与信息密度选择合适结构，提供真实示例或代码片段（技术主题），"
+    "使用内联引用与参考列表，最终保存报告到文件系统。"
+)
 
 
 # ==================== SubAgent 创建函数 ====================
@@ -257,7 +115,7 @@ def create_web_researcher(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=WEB_RESEARCHER_PROMPT,
+        system_prompt=f"{WEB_RESEARCHER_PROMPT}\n\n{WRITER_GUIDELINES}",
         **kwargs,
     )
     
@@ -324,7 +182,7 @@ def create_doc_analyst(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=DOC_ANALYST_PROMPT,
+        system_prompt=f"{DOC_ANALYST_PROMPT}\n\n{WRITER_GUIDELINES}",
         **kwargs,
     )
     
@@ -375,7 +233,7 @@ def create_report_writer(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=REPORT_WRITER_PROMPT,
+        system_prompt=f"{REPORT_WRITER_PROMPT}\n\n{WRITER_GUIDELINES}",
         **kwargs,
     )
     
@@ -430,4 +288,3 @@ def get_subagent_info() -> dict:
 
 
 logger.info("✅ SubAgents 模块已加载")
-

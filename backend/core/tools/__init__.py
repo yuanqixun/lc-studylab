@@ -20,14 +20,20 @@ BASIC_TOOLS = [
     calculator,
 ]
 
-# 需要 API Key 的工具
-ADVANCED_TOOLS = [
+# 需要外部 API 的工具做细分，便于在不同场景组合
+WEB_SEARCH_TOOLS = [
     web_search,
     web_search_simple,
+]
+
+WEATHER_TOOLS = [
     get_daily_weather,  # 智能天气查询（推荐）
     get_weather_forecast,  # 多天预报
     get_weather,  # 通用天气查询
 ]
+
+# 需要 API Key 的工具（默认等同于“高级”工具）
+ADVANCED_TOOLS = WEB_SEARCH_TOOLS + WEATHER_TOOLS
 
 # 所有工具的完整列表
 ALL_TOOLS = BASIC_TOOLS + ADVANCED_TOOLS
@@ -43,9 +49,11 @@ __all__ = [
     "get_weather",
     "get_weather_forecast",
     "get_daily_weather",
+    # 工具分组
     # 工具集合
     "BASIC_TOOLS",
     "ADVANCED_TOOLS",
+    "WEB_SEARCH_TOOLS",
+    "WEATHER_TOOLS",
     "ALL_TOOLS",
 ]
-

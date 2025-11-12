@@ -283,32 +283,38 @@ def get_daily_weather(
     day: Literal["today", "tomorrow", "day_after_tomorrow"] = "tomorrow"
 ) -> str:
     """
-    查询指定城市某一天的天气预报
+    查询指定城市某一天的天气预报（推荐使用）
     
-    这是最智能的天气查询工具，可以精确查询某一天的天气。
-    当用户问"明天天气"、"后天天气"时，应该使用这个工具。
+    **重要：这个工具内部已经知道当前日期，不需要先调用 get_current_date 或 get_current_time！**
+    
+    当用户问"今天天气"、"明天天气"、"后天天气"时，直接使用这个工具。
     
     Args:
         city: 城市名称或城市编码（adcode）
               例如："北京"、"上海"、"深圳"、"广州"
-        day: 查询哪一天的天气
-             - "today": 今天
-             - "tomorrow": 明天（默认）
-             - "day_after_tomorrow": 后天
+        day: 查询哪一天的天气（相对于当前日期）
+             - "today": 今天（相对于当前日期）
+             - "tomorrow": 明天（相对于当前日期，默认）
+             - "day_after_tomorrow": 后天（相对于当前日期）
     
     Returns:
         格式化的天气预报信息字符串（只包含指定那一天）
         
     Example:
-        >>> # 查询深圳明天的天气
-        >>> result = get_daily_weather.invoke({"city": "深圳", "day": "tomorrow"})
-        >>> print(result)
-        
-        >>> # 查询北京后天的天气
-        >>> result = get_daily_weather.invoke({"city": "北京", "day": "day_after_tomorrow"})
-        >>> print(result)
+        >>> # 查询深圳今天的天气
+        >>> result = get_daily_weather.invoke({"city": "深圳", "day": "today"})
+        >>> 
+        >>> # 查询北京明天的天气
+        >>> result = get_daily_weather.invoke({"city": "北京", "day": "tomorrow"})
+        >>> 
+        >>> # 查询上海后天的天气
+        >>> result = get_daily_weather.invoke({"city": "上海", "day": "day_after_tomorrow"})
     
-    注意：
+    重要提示：
+        - **不要先调用 get_current_date 或 get_current_time**，这个工具内部已经知道当前日期
+        - 如果用户问"今天天气"，直接调用 get_daily_weather(city="城市名", day="today")
+        - 如果用户问"明天天气"，直接调用 get_daily_weather(city="城市名", day="tomorrow")
+        - 如果用户问"后天天气"，直接调用 get_daily_weather(city="城市名", day="day_after_tomorrow")
         - 这个工具会自动调用预报天气API，但只返回指定那一天的信息
         - 更节省 token，适合用户只问某一天天气的场景
     """

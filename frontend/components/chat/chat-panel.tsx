@@ -92,31 +92,10 @@ export function ChatPanel({ initialMode = 'basic-agent' }: ChatPanelProps) {
         <div className="flex-1 flex flex-col">
           {/* 消息列表 */}
           <ScrollArea className="flex-1">
-            <div className="container max-w-4xl mx-auto py-6 px-4">
+            <div className="container max-w-4xl mx-auto py-6 px-4 min-h-full">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full space-y-8 py-12">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold">开始对话</h2>
-                    <p className="text-muted-foreground">
-                      选择一个模式，然后输入你的问题
-                    </p>
-                  </div>
-
-                  {/* 建议提示 */}
-                  <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
-                    {suggestions.map((suggestion, index) => (
-                      <Suggestion
-                        key={index}
-                        text={suggestion.text}
-                        icon={suggestion.icon}
-                        onClick={() => {
-                          handleInputChange({
-                            target: { value: suggestion.text },
-                          } as any)
-                        }}
-                      />
-                    ))}
-                  </div>
+                <div className="flex items-center justify-center min-h-full py-12">
+                  <h2 className="text-2xl font-bold text-center">您今天在想什么？</h2>
                 </div>
               ) : (
                 <Conversation>
@@ -197,4 +176,3 @@ export function ChatPanel({ initialMode = 'basic-agent' }: ChatPanelProps) {
     </div>
   )
 }
-

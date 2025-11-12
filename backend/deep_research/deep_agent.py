@@ -33,6 +33,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from config import settings, get_logger
 from core.models import get_chat_model
 from core.tools.filesystem import get_filesystem, ResearchFileSystem
+from core.prompts import WRITER_GUIDELINES
+from core.guardrails.output_validators import OutputValidator
 from deep_research.subagents import (
     create_web_researcher,
     create_doc_analyst,
@@ -357,33 +359,12 @@ class DeepResearchAgent:
 1. 使用搜索工具查找相关信息
 2. 评估信息的可信度和相关性
 3. 提取关键信息和数据
-4. 整理成结构化的研究笔记
-5. **重要**：使用 write_research_file 工具保存笔记到 notes 目录，文件名：web_research.md
+4. 整理为要点与段落混合的研究笔记，按来源类型自适配呈现（官方文档、论文、标准、新闻、博客）
+5. 使用内联引用并在结尾列出参考来源
+6. 使用 write_research_file 保存到 notes/web_research.md
 
-笔记格式：
-# 研究笔记：[主题]
-
-## 搜索策略
-- 关键词：...
-- 搜索次数：...
-
-## 主要发现
-1. [发现1]
-   - 来源：[URL]
-   - 可信度：⭐⭐⭐⭐⭐
-
-## 关键数据
-- ...
-
-## 参考来源
-1. [标题] - [URL]
-
-请确保：
-- 搜索多个角度和关键词
-- 优先选择权威来源
-- 记录所有来源链接
-- 提取关键数据和观点
-- **必须调用 write_research_file 保存笔记**
+写作准则：
+{WRITER_GUIDELINES}
 
 thread_id: {thread_id}
 """
@@ -539,42 +520,14 @@ thread_id: {thread_id}
 研究问题：{query}
 
 任务要求：
-1. 使用 list_research_files 列出所有研究笔记（thread_id: {thread_id}）
-2. 使用 read_research_file 阅读所有笔记
-3. 整合所有研究发现
-4. 撰写详细的研究报告
-5. 使用 write_research_file 保存报告到 reports 目录，文件名：final_report.md
+1. 使用 list_research_files 列出研究笔记（thread_id: {thread_id}）并逐一读取
+2. 整合研究发现与证据，避免模板化结构，按主题与信息密度选择合适章节
+3. 提供真实示例或代码片段（技术主题）与实践建议
+4. 使用内联引用并在结尾列出参考来源
+5. 使用 write_research_file 保存到 reports/final_report.md
 
-报告结构：
-# {query}
-
-## 执行摘要
-[简明扼要的总结]
-
-## 1. 研究背景
-### 1.1 研究问题
-### 1.2 研究方法
-### 1.3 信息来源
-
-## 2. 主要发现
-### 2.1 [发现1]
-### 2.2 [发现2]
-
-## 3. 详细分析
-[深入分析]
-
-## 4. 结论和建议
-### 4.1 主要结论
-### 4.2 实践建议
-
-## 5. 参考来源
-[所有来源]
-
-请确保：
-- 逻辑清晰，结构合理
-- 整合多个来源的信息
-- 提供深入的分析
-- 添加完整的引用
+写作准则：
+{WRITER_GUIDELINES}
 
 thread_id: {thread_id}
 """
@@ -696,22 +649,14 @@ thread_id: {thread_id}
                     
                     final_report = f"""# {query}
 
-## 执行摘要
-
-本研究针对"{query}"进行了深入调研，收集了多方面的信息和数据。
-
-## 研究材料
-
 {materials_section}
 
-## 结论
+结论与建议：基于上述材料给出清晰结论与可执行建议，并在文中保留关键证据的内联引用。
 
-基于以上研究材料，我们对"{query}"有了全面的了解。详细的分析和建议请参考上述各部分内容。
+参考来源：请在文末列出来源。
 
----
-*报告生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
-*研究任务 ID：{thread_id}*
-*包含材料：{', '.join([title for title, _ in research_materials])}*
+生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+研究任务ID：{thread_id}
 """
                 else:
                     logger.warning("   未找到任何研究材料")
@@ -753,7 +698,25 @@ thread_id: {thread_id}
                 except Exception as save_error:
                     logger.error(f"❌ 保存基础报告失败: {save_error}")
             
-            # 更新状态
+            is_technical = any(w in query.lower() for w in ["react", "hook", "api", "编程", "代码", "javascript", "python"])            
+            validator = OutputValidator(require_examples=is_technical)
+            result = validator.validate(final_report)
+            if not result.is_valid:
+                try:
+                    revision_prompt = f"请在保持现有结构与引用的前提下，补充示例或代码片段，并提升信息密度与可操作性。\n\n写作准则：\n{WRITER_GUIDELINES}\n\n原文：\n{final_report}"
+                    model = get_chat_model()
+                    revised = model.invoke([HumanMessage(content=revision_prompt)])
+                    revised_text = revised.content or final_report
+                    final_report = revised_text
+                    self.filesystem.write_file(
+                        "final_report.md",
+                        final_report,
+                        subdirectory="reports",
+                        metadata={"source": "revision"}
+                    )
+                except Exception:
+                    pass
+
             state["final_report"] = final_report
             state["report_done"] = True
             state["current_step"] = "report_writing"
@@ -897,4 +860,3 @@ def create_deep_research_agent(
 
 
 logger.info("✅ DeepAgent 模块已加载")
-

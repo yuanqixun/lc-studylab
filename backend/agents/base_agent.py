@@ -323,6 +323,7 @@ class BaseAgent:
         self,
         input_text: str,
         chat_history: Optional[List[BaseMessage]] = None,
+        config: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -331,6 +332,7 @@ class BaseAgent:
         Args:
             input_text: 用户输入的文本
             chat_history: 对话历史（可选）
+            config: LangGraph 配置（如 recursion_limit）
             **kwargs: 其他参数
             
         Returns:
@@ -355,7 +357,7 @@ class BaseAgent:
             graph_input.update(kwargs)
             
             # 异步执行 Graph
-            result = await self.graph.ainvoke(graph_input)
+            result = await self.graph.ainvoke(graph_input, config=config)
             
             # 提取最后一条 AI 消息
             output_messages = result.get("messages", [])

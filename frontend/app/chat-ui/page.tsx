@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   Brain,
   PanelLeft,
@@ -8,7 +8,7 @@ import {
   Search,
   Library,
 } from "lucide-react";
-import { ChatExample } from "@/components/chat/chat-example";
+import { ChatEnhanced } from "@/components/chat/chat-enhanced";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ChatUIPage() {
@@ -165,7 +165,11 @@ export default function ChatUIPage() {
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-hidden flex justify-center">
-          <ChatExample onScrollChange={handleScrollChange} />
+          <ChatEnhanced 
+            mode="default"
+            useTools={true}
+            onScrollChange={handleScrollChange} 
+          />
         </div>
       </main>
     </div>

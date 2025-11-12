@@ -24,6 +24,7 @@ class OutputValidator:
         self,
         content_filter: Optional[ContentFilter] = None,
         require_sources: bool = False,
+        require_examples: bool = False,
         min_length: int = 1,
         max_length: int = 100000,
         check_factuality: bool = False,
@@ -42,6 +43,7 @@ class OutputValidator:
         """
         self.content_filter = content_filter or ContentFilter()
         self.require_sources = require_sources
+        self.require_examples = require_examples
         self.min_length = min_length
         self.max_length = max_length
         self.check_factuality = check_factuality
@@ -112,12 +114,17 @@ class OutputValidator:
                 # 检查输出是否真的使用了来源
                 if not self._check_source_usage(output, sources):
                     warnings.append("输出可能未充分使用提供的来源")
+
+        # 5. 示例检查（技术主题场景）
+        if self.require_examples:
+            if "```" not in output:
+                errors.append("缺少示例或代码片段")
         
-        # 5. 事实性检查（占位符，未实现）
+        # 6. 事实性检查（占位符，未实现）
         if self.check_factuality:
             warnings.append("事实性检查功能尚未实现")
         
-        # 6. 返回结果
+        # 7. 返回结果
         is_valid = len(errors) == 0
         
         return OutputValidationResult(
@@ -184,4 +191,3 @@ class OutputValidator:
 default_validator = OutputValidator()
 rag_validator = OutputValidator(require_sources=True)
 strict_validator = OutputValidator(strict_mode=True)
-
