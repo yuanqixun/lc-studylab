@@ -1,15 +1,15 @@
-# LangChain 核心包 - 严格使用 1.0.3 版本（宪法级别规定）
-langchain==1.0.3
-langchain-core==1.0.3
-langchain-openai==1.0.2
-langchain-community==0.4.1
+# LangChain 核心包
+langchain>=1.1.0
+langchain-core>=1.0.3
+langchain-openai>=1.0.2
+langchain-community>=0.4.1
 
 # LangGraph - 用于构建复杂工作流
-langgraph==1.0.2
-langgraph-checkpoint-sqlite==3.0.0  # SQLite 检查点支持
+langgraph>=1.0.2
+langgraph-checkpoint-sqlite>=3.0.0  # SQLite 检查点支持
 
 # LangChain 集成包
-langchain-tavily==0.2.13  # Tavily 搜索工具（V1.0.0 推荐）
+langchain-tavily>=0.2.13  # Tavily 搜索工具（V1.0.0 推荐）
 
 # FastAPI 和服务器
 fastapi==0.121.0
