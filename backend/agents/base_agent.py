@@ -105,7 +105,8 @@ class BaseAgent:
         if model is None:
             # 使用默认模型（从配置读取）
             # create_agent 接受字符串格式，如 "openai:gpt-4o"
-            self.model = f"openai:{settings.openai_model}"
+            #self.model = f"openai:{settings.openai_model}"
+            self.model = f"{settings.openai_model}"
             logger.info(f"🤖 使用默认模型: {self.model}")
         elif isinstance(model, str):
             # 字符串标识符

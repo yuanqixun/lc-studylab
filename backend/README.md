@@ -44,18 +44,32 @@ LC-StudyLab 是一个智能学习 & 研究助手系统，基于 **LangChain v1.0
 - **LangChain Community**: 0.4.1
 - **LangGraph**: 1.0.2
 - **FastAPI**: 0.121.0
-- **Python**: 3.9+
+- **Python**: 3.11 ⚠️ **重要**: 必须使用 Python 3.11,不支持 3.12(详见 [故障排查指南](TROUBLESHOOTING.md))
 
 ## 📦 安装
 
 ### 1. 创建虚拟环境
 
+⚠️ **重要**: 必须使用 Python 3.11
+
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
+
+# 方式 1: 使用 conda (推荐)
+/opt/anaconda3/envs/py311/bin/python -m venv .venv
+
+# 方式 2: 使用 pyenv
+pyenv install 3.11.0
+pyenv local 3.11.0
+python -m venv .venv
+
+# 激活虚拟环境
+source .venv/bin/activate  # Linux/Mac
 # 或
-source venv/Scripts/activate  # Windows
+.venv\Scripts\activate  # Windows
+
+# 验证 Python 版本
+python --version  # 应该显示 Python 3.11.x
 ```
 
 ### 2. 安装依赖
