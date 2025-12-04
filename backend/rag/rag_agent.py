@@ -104,9 +104,27 @@ def create_rag_agent(
     """
     logger.info("🤖 创建 RAG Agent")
     
-    # 使用默认模型
+    # 创建聊天模型实例（而不是使用字符串）
     if model is None:
-        model = get_model_string()
+        # 使用默认模型
+        chat_model = get_chat_model(streaming=streaming)
+    else:
+        # 如果传入的是字符串，解析并创建模型
+        if isinstance(model, str):
+            # 解析 "provider:model_name" 格式
+            if ":" in model:
+                provider, model_name = model.split(":", 1)
+            else:
+                provider = "openai"
+                model_name = model
+            
+            chat_model = get_chat_model(
+                model_name=model_name,
+                streaming=streaming
+            )
+        else:
+            # 如果已经是模型实例，直接使用
+            chat_model = model
     
     # 使用默认系统提示词
     if system_prompt is None:
@@ -131,15 +149,16 @@ def create_rag_agent(
     logger.debug("   创建 Agent...")
     
     # 使用 LangChain 1.0.3 的 create_agent API
+    # 传递模型实例而不是字符串
     agent = create_agent(
-        model=model,
+        model=chat_model,
         tools=tools,
         system_prompt=system_prompt,
         **kwargs,
     )
     
     logger.info(f"✅ RAG Agent 创建成功")
-    logger.info(f"   模型: {model}")
+    logger.info(f"   模型: {chat_model}")
     logger.info(f"   流式输出: {streaming}")
     
     return agent

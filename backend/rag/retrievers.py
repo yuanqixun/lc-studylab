@@ -16,7 +16,6 @@
 from typing import Optional, Literal
 from langchain_core.vectorstores import VectorStore
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.tools.retriever import create_retriever_tool as lc_create_retriever_tool
 
 from config import settings, get_logger
 
@@ -123,7 +122,7 @@ def create_retriever_tool(
     retriever: BaseRetriever,
     name: str = "knowledge_base",
     description: Optional[str] = None,
-) -> any:
+):
     """
     将检索器封装为 LangChain Tool
     
@@ -163,6 +162,9 @@ def create_retriever_tool(
         >>> # 查询
         >>> result = agent_executor.invoke({"input": "什么是机器学习？"})
     """
+    from langchain_core.tools import StructuredTool
+    from pydantic import BaseModel, Field
+    
     # 默认描述
     if description is None:
         description = (
@@ -175,11 +177,42 @@ def create_retriever_tool(
     logger.debug(f"   描述: {description}")
     
     try:
-        # 使用 LangChain 的 create_retriever_tool
-        tool = lc_create_retriever_tool(
-            retriever=retriever,
+        # 定义输入模式
+        class RetrieverInput(BaseModel):
+            """检索器工具的输入"""
+            query: str = Field(description="搜索查询字符串")
+        
+        # 定义检索函数
+        def retrieve_documents(query: str) -> str:
+            """
+            从知识库检索相关文档
+            
+            Args:
+                query: 搜索查询
+                
+            Returns:
+                检索到的文档内容（字符串格式）
+            """
+            docs = retriever.invoke(query)
+            
+            if not docs:
+                return "未找到相关文档。"
+            
+            # 将文档格式化为字符串
+            result_parts = []
+            for i, doc in enumerate(docs, 1):
+                content = doc.page_content
+                source = doc.metadata.get("source", "未知来源") if doc.metadata else "未知来源"
+                result_parts.append(f"文档 {i} (来源: {source}):\n{content}")
+            
+            return "\n\n".join(result_parts)
+        
+        # 使用 StructuredTool 创建工具
+        tool = StructuredTool.from_function(
+            func=retrieve_documents,
             name=name,
             description=description,
+            args_schema=RetrieverInput,
         )
         
         logger.info("✅ 检索器工具创建成功")

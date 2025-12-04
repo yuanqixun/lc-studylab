@@ -12,18 +12,115 @@ Embeddings 模块
 - https://reference.langchain.com/python/langchain_openai/embeddings/
 """
 
-from typing import Optional
+from typing import Optional, List
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.embeddings import Embeddings
+import tiktoken
 
 from config import settings, get_logger
 
 logger = get_logger(__name__)
 
 
+class SafeOpenAIEmbeddings(Embeddings):
+    """
+    安全的 OpenAI Embeddings 包装器
+    
+    自动处理 token 限制问题，对超长文本进行截断
+    """
+    
+    def __init__(
+        self,
+        embeddings: OpenAIEmbeddings,
+        max_tokens: int = 512,
+        encoding_name: str = "cl100k_base",
+    ):
+        """
+        初始化安全的 Embeddings 包装器
+        
+        Args:
+            embeddings: 原始的 OpenAIEmbeddings 实例
+            max_tokens: 最大 token 数限制
+            encoding_name: tokenizer 编码名称
+        """
+        self.embeddings = embeddings
+        self.max_tokens = max_tokens
+        try:
+            self.encoding = tiktoken.get_encoding(encoding_name)
+        except Exception as e:
+            logger.warning(f"无法加载 tiktoken 编码器: {e}，使用简单字符截断")
+            self.encoding = None
+    
+    def _truncate_text(self, text: str) -> str:
+        """
+        截断文本到最大 token 限制
+        
+        Args:
+            text: 输入文本
+            
+        Returns:
+            截断后的文本
+        """
+        if not text:
+            return text
+            
+        if self.encoding is None:
+            # 如果没有 tokenizer，使用简单的字符截断
+            # 假设平均每个 token 约 4 个字符（中文约 1.5-2 个字符）
+            max_chars = self.max_tokens * 2  # 保守估计
+            if len(text) > max_chars:
+                logger.warning(f"文本过长 ({len(text)} 字符)，截断到 {max_chars} 字符")
+                return text[:max_chars]
+            return text
+        
+        # 使用 tiktoken 进行精确的 token 计数和截断
+        tokens = self.encoding.encode(text)
+        if len(tokens) > self.max_tokens:
+            logger.warning(
+                f"文本过长 ({len(tokens)} tokens)，截断到 {self.max_tokens} tokens"
+            )
+            truncated_tokens = tokens[:self.max_tokens]
+            return self.encoding.decode(truncated_tokens)
+        
+        return text
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """
+        批量嵌入文档，自动截断过长文本
+        
+        Args:
+            texts: 文本列表
+            
+        Returns:
+            向量列表
+        """
+        # 截断所有文本
+        truncated_texts = [self._truncate_text(text) for text in texts]
+        
+        # 调用原始的 embeddings
+        return self.embeddings.embed_documents(truncated_texts)
+    
+    def embed_query(self, text: str) -> List[float]:
+        """
+        嵌入查询文本，自动截断过长文本
+        
+        Args:
+            text: 查询文本
+            
+        Returns:
+            向量
+        """
+        # 截断文本
+        truncated_text = self._truncate_text(text)
+        
+        # 调用原始的 embeddings
+        return self.embeddings.embed_query(truncated_text)
+
+
 def get_embeddings(
     model: Optional[str] = None,
     batch_size: Optional[int] = None,
+    max_tokens: Optional[int] = None,
     **kwargs,
 ) -> Embeddings:
     """
@@ -31,14 +128,15 @@ def get_embeddings(
     
     Args:
         model: 模型名称，默认使用配置中的 embedding_model
-            - "text-embedding-3-small": 小型模型，速度快，成本低
+            - "text-embedding-3-small": 小型模型,速度快，成本低
             - "text-embedding-3-large": 大型模型，效果好，成本高
             - "text-embedding-ada-002": 旧版模型（不推荐）
         batch_size: 批处理大小，默认使用配置值
+        max_tokens: 单个文本的最大 token 数限制，默认 512
         **kwargs: 其他传递给模型的参数
         
     Returns:
-        Embeddings 实例
+        Embeddings 实例（包装了 token 限制处理）
         
     Example:
         >>> # 使用默认配置
@@ -59,13 +157,15 @@ def get_embeddings(
     # 使用配置中的默认值
     model = model or settings.embedding_model
     batch_size = batch_size or settings.embedding_batch_size
+    max_tokens = max_tokens or 512  # 默认 512 tokens 限制
     
     logger.info(f"🔢 创建 Embedding 模型: {model}")
     logger.debug(f"   batch_size: {batch_size}")
+    logger.debug(f"   max_tokens: {max_tokens}")
     
     try:
         # 创建 OpenAI Embeddings 实例
-        embeddings = OpenAIEmbeddings(
+        base_embeddings = OpenAIEmbeddings(
             model=model,
             api_key=settings.openai_api_key,
             base_url=settings.openai_api_base,
@@ -74,7 +174,13 @@ def get_embeddings(
             **kwargs,
         )
         
-        logger.debug(f"✅ Embedding 模型创建成功")
+        # 使用 SafeOpenAIEmbeddings 包装器来处理 token 限制
+        embeddings = SafeOpenAIEmbeddings(
+            embeddings=base_embeddings,
+            max_tokens=max_tokens,
+        )
+        
+        logger.debug(f"✅ Embedding 模型创建成功（带 token 限制保护）")
         return embeddings
         
     except Exception as e:
