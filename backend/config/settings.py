@@ -4,8 +4,36 @@
 """
 
 from typing import Optional
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# 查找项目根目录的 .env 文件
+def find_env_file() -> Path:
+    """
+    查找项目根目录的 .env 文件
+    支持从不同目录运行（如 notebooks/）
+    """
+    current = Path(__file__).resolve().parent  # config/
+    backend_dir = current.parent  # backend/
+    env_path = backend_dir / ".env"
+    
+    if env_path.exists():
+        return env_path
+    
+    # 如果没找到，尝试从当前工作目录查找
+    cwd_env = Path.cwd() / ".env"
+    if cwd_env.exists():
+        return cwd_env
+    
+    # 如果还是没找到，尝试从父目录查找（处理从 notebooks/ 运行的情况）
+    parent_env = Path.cwd().parent / ".env"
+    if parent_env.exists():
+        return parent_env
+    
+    # 返回默认路径
+    return env_path
 
 
 class Settings(BaseSettings):
@@ -235,7 +263,7 @@ class Settings(BaseSettings):
     
     # Pydantic Settings 配置
     model_config = SettingsConfigDict(
-        env_file=".env",  # 从 .env 文件加载
+        env_file=str(find_env_file()),  # 动态查找 .env 文件
         env_file_encoding="utf-8",
         case_sensitive=False,  # 环境变量不区分大小写
         extra="ignore",  # 忽略额外的环境变量
